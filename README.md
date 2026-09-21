@@ -647,3 +647,8 @@ Aggregated patterns identify areas worth investigating; they do not by themselve
 ## Automated Regression Detection
 
 The statistics service now compares successive builds within each firmware and surfaces investigation signals for substantial drops in success rate or increases in timeout, shutdown, and browser-crash rates. Every comparison includes sample sizes and rate deltas. These are descriptive triage signals—not proof of causation. See `REGRESSION-DETECTION.md`.
+
+
+## Stage-Level Comparison
+
+The analysis API now measures how often each firmware/build reaches every host-defined stage. `stageReach` reports per-stage counts and percentages, while `stageComparisons` highlights substantial drops between builds when both samples meet the minimum size. This helps identify where observed behavior begins to diverge instead of looking only at final success/failure. Stage signals are triage indicators, not proof of causation. See `STAGE-COMPARISON.md`.
