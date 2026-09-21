@@ -614,3 +614,15 @@ Find it. Reproduce it. Measure it. Stabilize it.
 Community testing becomes significantly more useful when everyone speaks the same diagnostic language.
 
 Contributions, integrations, testing, bug reports, and improvements are welcome.
+
+---
+
+## Author & Credit
+
+Created and maintained by **KillerNoS**.
+
+If you implement or redistribute this framework, please retain the copyright and license notice included in the repository. Contributions and integrations from the PS4 development community are welcome.
+
+## License
+
+Released under the **MIT License**. See `LICENSE` for the full license text.
