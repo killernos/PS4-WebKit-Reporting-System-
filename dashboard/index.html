@@ -12,6 +12,7 @@ small{color:#aaa}
 <div id="summary" class="card">Loading…</div>
 <div class="card"><h2>Firmware / Build</h2><table><thead><tr><th>Firmware</th><th>Build</th><th>Attempts</th><th>Success</th><th>Rate</th></tr></thead><tbody id="rows"></tbody></table></div>
 <div class="card"><h2>Regression Signals</h2><table><thead><tr><th>Firmware</th><th>Baseline</th><th>Current</th><th>Samples</th><th>Signals</th></tr></thead><tbody id="regressions"></tbody></table></div>
+<div class="card"><h2>Stage Reach Comparison</h2><table><thead><tr><th>Firmware</th><th>Build</th><th>Samples</th><th>Stage reach</th></tr></thead><tbody id="stageReach"></tbody></table></div>
 <div class="card"><h2>Last Observed Stages</h2><pre id="stages"></pre></div>
 <script>
 fetch("/api/stats").then(function(r){return r.json()}).then(function(d){
@@ -26,6 +27,12 @@ fetch("/api/stats").then(function(r){return r.json()}).then(function(d){
   rh+="<tr><td>"+esc(x.firmware)+"</td><td>"+esc(x.baselineBuild)+"</td><td>"+esc(x.currentBuild)+"</td><td>"+x.baselineSampleSize+" / "+x.currentSampleSize+"</td><td>"+esc(x.interpretation)+(x.signals.length?" — "+esc(x.signals.join(", ")):"")+"</td></tr>";
  });
  document.getElementById("regressions").innerHTML=rh;
+ var sh="";
+ (d.stageReach||[]).forEach(function(x){
+   var parts=[]; Object.keys(x.stages||{}).forEach(function(k){parts.push(k+": "+x.stages[k].rate+"% ("+x.stages[k].reached+")")});
+   sh+="<tr><td>"+esc(x.firmware)+"</td><td>"+esc(x.buildId)+"</td><td>"+x.sampleSize+"</td><td>"+esc(parts.join(" | "))+"</td></tr>";
+ });
+ document.getElementById("stageReach").innerHTML=sh;
  document.getElementById("stages").textContent=JSON.stringify(d.lastStageCounts,null,2);
 }).catch(function(e){document.getElementById("summary").textContent="Unable to load stats: "+e.message});
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]})}
