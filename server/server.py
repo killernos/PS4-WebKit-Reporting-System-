@@ -3,6 +3,7 @@
 import json, os, re, secrets
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from collections import Counter, defaultdict
 
 HOST = os.getenv("REPORT_HOST", "127.0.0.1")
 PORT = int(os.getenv("REPORT_PORT", "8765"))
@@ -14,6 +15,69 @@ os.makedirs(STORAGE, exist_ok=True)
 
 def safe_id(value):
     return re.sub(r"[^A-Za-z0-9_.-]", "_", str(value))[:128]
+
+def load_reports():
+    rows = []
+    for name in os.listdir(STORAGE):
+        if not name.endswith(".json"):
+            continue
+        try:
+            with open(os.path.join(STORAGE, name), encoding="utf-8") as f:
+                envelope = json.load(f)
+            report = envelope.get("report", {})
+            if isinstance(report, dict):
+                rows.append(report)
+        except Exception:
+            pass
+    return rows
+
+def build_stats():
+    reports = load_reports()
+    statuses = Counter()
+    firmwares = Counter()
+    stages = Counter()
+    builds = Counter()
+    stability = Counter()
+    matrix = defaultdict(lambda: Counter())
+
+    for r in reports:
+        test = r.get("test") or {}
+        fw = str((r.get("firmware") or {}).get("version", "UNKNOWN"))
+        host = r.get("host") or {}
+        build = str(host.get("buildId") or host.get("version") or "UNKNOWN")
+        status = str(test.get("status", "UNKNOWN"))
+        stage = str(test.get("lastStage", "UNKNOWN"))
+        statuses[status] += 1
+        firmwares[fw] += 1
+        stages[stage] += 1
+        builds[build] += 1
+        matrix[(fw, build)][status] += 1
+        for key, value in (r.get("stability") or {}).items():
+            if value is True:
+                stability[key] += 1
+
+    comparisons = []
+    for (fw, build), counts in sorted(matrix.items()):
+        attempts = sum(counts.values())
+        success = counts.get("SUCCESS", 0)
+        comparisons.append({
+            "firmware": fw, "buildId": build, "attempts": attempts,
+            "success": success,
+            "successRate": round((success / attempts * 100.0), 2) if attempts else 0.0,
+            "statuses": dict(counts)
+        })
+
+    return {
+        "ok": True,
+        "sampleSize": len(reports),
+        "statusCounts": dict(statuses),
+        "firmwareCounts": dict(firmwares),
+        "lastStageCounts": dict(stages.most_common()),
+        "buildCounts": dict(builds),
+        "stabilityObservations": dict(stability),
+        "firmwareBuildComparison": comparisons,
+        "note": "Aggregates describe submitted observations; they do not establish root cause."
+    }
 
 class Handler(BaseHTTPRequestHandler):
     def headers_common(self):
@@ -30,6 +94,13 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(204); self.headers_common(); self.end_headers()
+
+    def do_GET(self):
+        if self.path == "/health":
+            return self.reply(200, {"ok":True,"service":"ps4-reporting"})
+        if self.path == "/api/stats":
+            return self.reply(200, build_stats())
+        return self.reply(404, {"ok":False,"error":"not-found"})
 
     def do_POST(self):
         if self.path != ROUTE:
