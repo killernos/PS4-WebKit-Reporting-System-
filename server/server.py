@@ -31,6 +31,64 @@ def load_reports():
             pass
     return rows
 
+def regression_analysis(reports, min_samples=10, warn_delta=10.0):
+    """Compare build observations within each firmware.
+
+    This is descriptive triage, not a causal test. Builds are ordered by first
+    observed report timestamp when available, otherwise by build id.
+    """
+    groups = defaultdict(list)
+    for r in reports:
+        fw = str((r.get("firmware") or {}).get("version", "UNKNOWN"))
+        host = r.get("host") or {}
+        build = str(host.get("buildId") or host.get("version") or "UNKNOWN")
+        groups[(fw, build)].append(r)
+
+    summaries = {}
+    for key, rows in groups.items():
+        n = len(rows)
+        successes = sum(1 for r in rows if (r.get("test") or {}).get("status") == "SUCCESS")
+        timeouts = sum(1 for r in rows if (r.get("test") or {}).get("status") == "TIMEOUT" or (r.get("stability") or {}).get("timeout") is True)
+        shutdowns = sum(1 for r in rows if (r.get("stability") or {}).get("consoleShutdown") is True)
+        crashes = sum(1 for r in rows if (r.get("stability") or {}).get("browserCrash") is True)
+        first = min([str(r.get("timestamp") or r.get("startedAt") or "") for r in rows] or [""])
+        summaries[key] = {
+            "sampleSize":n, "firstObserved":first,
+            "successRate":round(successes*100.0/n,2) if n else 0,
+            "timeoutRate":round(timeouts*100.0/n,2) if n else 0,
+            "shutdownRate":round(shutdowns*100.0/n,2) if n else 0,
+            "browserCrashRate":round(crashes*100.0/n,2) if n else 0
+        }
+
+    by_fw = defaultdict(list)
+    for (fw, build), summary in summaries.items():
+        by_fw[fw].append((build, summary))
+
+    comparisons = []
+    for fw, items in by_fw.items():
+        items.sort(key=lambda x: (x[1]["firstObserved"], x[0]))
+        for i in range(1, len(items)):
+            base_build, base = items[i-1]
+            new_build, new = items[i]
+            metrics = {}
+            for metric in ("successRate","timeoutRate","shutdownRate","browserCrashRate"):
+                delta = round(new[metric] - base[metric], 2)
+                metrics[metric] = {"baseline":base[metric],"current":new[metric],"deltaPoints":delta}
+            sufficient = base["sampleSize"] >= min_samples and new["sampleSize"] >= min_samples
+            signals = []
+            if sufficient:
+                if metrics["successRate"]["deltaPoints"] <= -warn_delta: signals.append("SUCCESS_RATE_DROP")
+                if metrics["timeoutRate"]["deltaPoints"] >= warn_delta: signals.append("TIMEOUT_RATE_INCREASE")
+                if metrics["shutdownRate"]["deltaPoints"] >= warn_delta: signals.append("SHUTDOWN_RATE_INCREASE")
+                if metrics["browserCrashRate"]["deltaPoints"] >= warn_delta: signals.append("BROWSER_CRASH_RATE_INCREASE")
+            comparisons.append({
+                "firmware":fw, "baselineBuild":base_build, "currentBuild":new_build,
+                "baselineSampleSize":base["sampleSize"], "currentSampleSize":new["sampleSize"],
+                "sufficientSample":sufficient, "signals":signals, "metrics":metrics,
+                "interpretation":"investigate" if signals else ("insufficient-sample" if not sufficient else "no-threshold-signal")
+            })
+    return comparisons
+
 def build_stats():
     reports = load_reports()
     statuses = Counter()
@@ -76,6 +134,7 @@ def build_stats():
         "buildCounts": dict(builds),
         "stabilityObservations": dict(stability),
         "firmwareBuildComparison": comparisons,
+        "regressionComparisons": regression_analysis(reports),
         "note": "Aggregates describe submitted observations; they do not establish root cause."
     }
 
