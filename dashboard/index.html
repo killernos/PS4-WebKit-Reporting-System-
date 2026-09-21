@@ -1,0 +1,26 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>PS4 Stability Dashboard</title>
+<style>
+body{font-family:system-ui,sans-serif;max-width:1100px;margin:40px auto;padding:0 18px;background:#111;color:#eee}
+.card{border:1px solid #444;border-radius:8px;padding:16px;margin:14px 0}
+table{width:100%;border-collapse:collapse}th,td{padding:8px;border-bottom:1px solid #333;text-align:left}
+small{color:#aaa}
+</style>
+<h1>PS4 Stability Dashboard</h1>
+<p><small>Aggregated observations only. Correlation does not establish root cause.</small></p>
+<div id="summary" class="card">Loading…</div>
+<div class="card"><h2>Firmware / Build</h2><table><thead><tr><th>Firmware</th><th>Build</th><th>Attempts</th><th>Success</th><th>Rate</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="card"><h2>Last Observed Stages</h2><pre id="stages"></pre></div>
+<script>
+fetch("/api/stats").then(function(r){return r.json()}).then(function(d){
+ document.getElementById("summary").textContent="Reports: "+d.sampleSize+" | Outcomes: "+JSON.stringify(d.statusCounts)+" | Stability: "+JSON.stringify(d.stabilityObservations);
+ var html="";
+ (d.firmwareBuildComparison||[]).forEach(function(x){
+  html+="<tr><td>"+esc(x.firmware)+"</td><td>"+esc(x.buildId)+"</td><td>"+x.attempts+"</td><td>"+x.success+"</td><td>"+x.successRate+"%</td></tr>";
+ });
+ document.getElementById("rows").innerHTML=html;
+ document.getElementById("stages").textContent=JSON.stringify(d.lastStageCounts,null,2);
+}).catch(function(e){document.getElementById("summary").textContent="Unable to load stats: "+e.message});
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]})}
+</script>
