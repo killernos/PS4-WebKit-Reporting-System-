@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>PS4 Reporting Integration Example</title></head>
+<body>
+<h1>PS4 Reporting Integration Example</h1>
+<pre id="status">Ready</pre>
+<button id="submit">Submit Test Report</button>
+<script src="../reporting-client.js"></script>
+<script>
+var report = new PS4ReportingClient({
+  endpoint: "https://YOUR-DOMAIN.example/api/community-report",
+  firmware: { version:"X.XX", source:"host-detection" },
+  host: { name:"Example Host", version:"1.0.0", buildId:"example-001" }
+});
+
+report.stage("WEBKIT-READY");
+report.stage("USERLAND-START");
+// Hook the following calls into real milestones in your existing implementation:
+// report.stage("USERLAND-READY");
+// report.setState("userland", "VERIFIED");
+// report.stage("PRIMITIVE-READY");
+// report.stage("KERNEL-START");
+// report.stage("PAYLOAD-START");
+// report.success();
+
+document.getElementById("submit").onclick = function () {
+  report.submit().then(function (r) {
+    document.getElementById("status").textContent = "Submitted: " + JSON.stringify(r);
+  }).catch(function (e) {
+    document.getElementById("status").textContent = e.message;
+  });
+};
+
+var interrupted = PS4ReportingClient.recoverInterrupted();
+if (interrupted) {
+  document.getElementById("status").textContent =
+    "Previous interrupted session found at stage: " + interrupted.test.lastStage;
+}
+</script>
+</body>
+</html>
