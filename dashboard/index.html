@@ -11,6 +11,7 @@ small{color:#aaa}
 <p><small>Aggregated observations only. Correlation does not establish root cause.</small></p>
 <div id="summary" class="card">Loading…</div>
 <div class="card"><h2>Firmware / Build</h2><table><thead><tr><th>Firmware</th><th>Build</th><th>Attempts</th><th>Success</th><th>Rate</th></tr></thead><tbody id="rows"></tbody></table></div>
+<div class="card"><h2>Regression Signals</h2><table><thead><tr><th>Firmware</th><th>Baseline</th><th>Current</th><th>Samples</th><th>Signals</th></tr></thead><tbody id="regressions"></tbody></table></div>
 <div class="card"><h2>Last Observed Stages</h2><pre id="stages"></pre></div>
 <script>
 fetch("/api/stats").then(function(r){return r.json()}).then(function(d){
@@ -20,6 +21,11 @@ fetch("/api/stats").then(function(r){return r.json()}).then(function(d){
   html+="<tr><td>"+esc(x.firmware)+"</td><td>"+esc(x.buildId)+"</td><td>"+x.attempts+"</td><td>"+x.success+"</td><td>"+x.successRate+"%</td></tr>";
  });
  document.getElementById("rows").innerHTML=html;
+ var rh="";
+ (d.regressionComparisons||[]).forEach(function(x){
+  rh+="<tr><td>"+esc(x.firmware)+"</td><td>"+esc(x.baselineBuild)+"</td><td>"+esc(x.currentBuild)+"</td><td>"+x.baselineSampleSize+" / "+x.currentSampleSize+"</td><td>"+esc(x.interpretation)+(x.signals.length?" — "+esc(x.signals.join(", ")):"")+"</td></tr>";
+ });
+ document.getElementById("regressions").innerHTML=rh;
  document.getElementById("stages").textContent=JSON.stringify(d.lastStageCounts,null,2);
 }).catch(function(e){document.getElementById("summary").textContent="Unable to load stats: "+e.message});
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]})}
