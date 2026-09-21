@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><title>Firmware compatibility tests</title>
+<pre id="out"></pre><script src="../reporting-client.js"></script><script>
+(function(){
+ var cases=["6.00","9.00","11.00","12.00","13.02","13.52","UNKNOWN","14.00-future-test"];
+ var out=[];
+ cases.forEach(function(fw){
+   var r=new PS4ReportingClient({firmware:{version:fw,source:"test"},host:{name:"test",version:"1",buildId:"test"}});
+   r.setCompatibility("RESEARCH");
+   r.setCapability("webKit","UNKNOWN");
+   var data=r.buildReport();
+   out.push((data.firmware.version===fw && data.compatibility.status==="RESEARCH") ? "PASS "+fw : "FAIL "+fw);
+ });
+ document.getElementById("out").textContent=out.join("\n");
+}());
+</script>
