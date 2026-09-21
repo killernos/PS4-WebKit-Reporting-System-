@@ -4,6 +4,13 @@ Find where PS4 jailbreaks fail. Reproduce it. Measure it. Stabilize it.
 
 A universal, open-source diagnostics and community reporting framework for PS4 WebKit hosts, jailbreak implementations, exploit chains, and payload loaders across all firmware versions.
 
+## Non-Legacy Firmware Scope
+
+This project targets **non-legacy PS4 firmware** as a reporting and stability-analysis framework. It deliberately does not hard-code a firmware allowlist: the integrating WebKit host defines its non-legacy range, while unknown and future firmware values remain reportable for research.
+
+Reporting compatibility does **not** mean jailbreak compatibility. Each host should declare a firmware as `SUPPORTED`, `EXPERIMENTAL`, `RESEARCH`, or `UNKNOWN`, and report observed capabilities separately. See `COMPATIBILITY.md`.
+
+
 The purpose of this project is simple:
 
 Turn community jailbreak testing into structured, actionable stability data.
