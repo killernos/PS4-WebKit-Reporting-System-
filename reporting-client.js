@@ -23,6 +23,8 @@
       this.host = options.host || { name:"Unknown Host", version:"unknown", buildId:"unknown" };
       this.firmware = options.firmware || { version:"unknown", source:"unknown" };
       this.payload = options.payload || { name:null, version:null, result:"NOT_ATTEMPTED" };
+      this.compatibility = { status: options.compatibility || "UNKNOWN" };
+      this.capabilities = options.capabilities || {};
       this.sessionId = id("SESSION");
       this.reportId = id("REPORT");
       this.attempt = options.attempt || 1;
@@ -75,6 +77,20 @@
       return this;
     }
 
+    setCompatibility(status) {
+      var allowed = ["SUPPORTED","EXPERIMENTAL","RESEARCH","UNKNOWN"];
+      status = String(status || "UNKNOWN").toUpperCase();
+      this.compatibility.status = allowed.indexOf(status) >= 0 ? status : "UNKNOWN";
+      this.checkpoint();
+      return this;
+    }
+
+    setCapability(name, status) {
+      this.capabilities[String(name)] = String(status || "UNKNOWN").toUpperCase();
+      this.checkpoint();
+      return this;
+    }
+
     setPayload(name, version, result) {
       this.payload = { name:name || null, version:version || null, result:result || "NOT_ATTEMPTED" };
       this.checkpoint();
@@ -116,7 +132,7 @@
         timestamp:now(), startedAt:this.startedAt, platform:"PS4",
         firmware:this.firmware, host:this.host,
         test:{ attempt:this.attempt, status:this.status, lastStage:this.lastStage, previousStage:this.previousStage },
-        state:this.state, payload:this.payload, stability:this.stability,
+        state:this.state, compatibility:this.compatibility, capabilities:this.capabilities, payload:this.payload, stability:this.stability,
         events:this.events, diagnostics:this.diagnostics
       };
     }
