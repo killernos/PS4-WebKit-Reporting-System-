@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/ps4-community-report-1.json",
+  "title": "PS4 Community Stability Report",
+  "type": "object",
+  "required": ["schema","reportId","sessionId","timestamp","platform","firmware","host","test","state","stability","diagnostics"],
+  "properties": {
+    "schema": {"const":"ps4-community-report-1"},
+    "reportId": {"type":"string","minLength":8,"maxLength":128},
+    "sessionId": {"type":"string","minLength":8,"maxLength":128},
+    "timestamp": {"type":"string","format":"date-time"},
+    "startedAt": {"type":"string","format":"date-time"},
+    "platform": {"const":"PS4"},
+    "firmware": {
+      "type":"object","required":["version"],
+      "properties":{"version":{"type":"string","minLength":1,"maxLength":32},"source":{"type":"string","maxLength":64}},
+      "additionalProperties":true
+    },
+    "host": {
+      "type":"object","required":["name"],
+      "properties":{"name":{"type":"string","maxLength":128},"version":{"type":"string","maxLength":64},"buildId":{"type":"string","maxLength":128}},
+      "additionalProperties":true
+    },
+    "test": {
+      "type":"object","required":["attempt","status","lastStage"],
+      "properties":{
+        "attempt":{"type":"integer","minimum":1},
+        "status":{"enum":["RUNNING","SUCCESS","FAILURE","TIMEOUT","INTERRUPTED"]},
+        "lastStage":{"type":"string","maxLength":128},
+        "previousStage":{"type":["string","null"],"maxLength":128}
+      },
+      "additionalProperties":true
+    },
+    "state":{"type":"object","additionalProperties":{"type":["string","number","boolean","null"]}},
+    "payload":{"type":"object","additionalProperties":true},
+    "stability":{
+      "type":"object",
+      "properties":{
+        "browserCrash":{"type":"boolean"},"browserHang":{"type":"boolean"},
+        "consoleShutdown":{"type":"boolean"},"consoleReboot":{"type":"boolean"},
+        "kernelFaultObserved":{"type":"boolean"},"timeout":{"type":"boolean"}
+      },
+      "additionalProperties":true
+    },
+    "events":{"type":"array","maxItems":1000,"items":{"type":"object"}},
+    "diagnostics":{"type":"array","maxItems":1000,"items":{"type":"object"}}
+  },
+  "additionalProperties":true
+}
