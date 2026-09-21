@@ -642,3 +642,8 @@ Released under the **MIT License**. See `LICENSE` for the full license text.
 The reference server now provides `GET /api/stats` for aggregate community stability data and `GET /health` for service health. Aggregates include sample size, outcomes, firmware/build comparisons, last-observed-stage distribution, and stability observations. See `STABILITY-ANALYSIS.md` and `dashboard/index.html`.
 
 Aggregated patterns identify areas worth investigating; they do not by themselves prove root cause.
+
+
+## Automated Regression Detection
+
+The statistics service now compares successive builds within each firmware and surfaces investigation signals for substantial drops in success rate or increases in timeout, shutdown, and browser-crash rates. Every comparison includes sample sizes and rate deltas. These are descriptive triage signals—not proof of causation. See `REGRESSION-DETECTION.md`.
