@@ -31,6 +31,60 @@ def load_reports():
             pass
     return rows
 
+def stage_analysis(reports):
+    """Aggregate reached stages by firmware/build from explicit event history."""
+    groups = defaultdict(list)
+    for r in reports:
+        fw = str((r.get("firmware") or {}).get("version", "UNKNOWN"))
+        host = r.get("host") or {}
+        build = str(host.get("buildId") or host.get("version") or "UNKNOWN")
+        groups[(fw, build)].append(r)
+
+    output = []
+    for (fw, build), rows in sorted(groups.items()):
+        counts = Counter()
+        for r in rows:
+            reached = set()
+            for e in (r.get("events") or []):
+                if isinstance(e, dict):
+                    stage = e.get("stage") or e.get("name")
+                    if stage:
+                        reached.add(str(stage))
+            last = (r.get("test") or {}).get("lastStage")
+            if last:
+                reached.add(str(last))
+            for stage in reached:
+                counts[stage] += 1
+        n = len(rows)
+        stages = {}
+        for stage, count in sorted(counts.items()):
+            stages[stage] = {"reached":count,"rate":round(count*100.0/n,2) if n else 0.0}
+        output.append({"firmware":fw,"buildId":build,"sampleSize":n,"stages":stages})
+    return output
+
+def stage_comparisons(stage_rows, min_samples=10, warn_delta=10.0):
+    by_fw = defaultdict(list)
+    for row in stage_rows:
+        by_fw[row["firmware"]].append(row)
+    out = []
+    for fw, rows in by_fw.items():
+        rows.sort(key=lambda x:x["buildId"])
+        for i in range(1,len(rows)):
+            a,b=rows[i-1],rows[i]
+            all_stages=sorted(set(a["stages"]) | set(b["stages"]))
+            diffs=[]
+            sufficient=a["sampleSize"]>=min_samples and b["sampleSize"]>=min_samples
+            for stage in all_stages:
+                ar=a["stages"].get(stage,{}).get("rate",0.0)
+                br=b["stages"].get(stage,{}).get("rate",0.0)
+                delta=round(br-ar,2)
+                diffs.append({"stage":stage,"baselineRate":ar,"currentRate":br,"deltaPoints":delta,
+                              "signal":bool(sufficient and delta <= -warn_delta)})
+            out.append({"firmware":fw,"baselineBuild":a["buildId"],"currentBuild":b["buildId"],
+                        "baselineSampleSize":a["sampleSize"],"currentSampleSize":b["sampleSize"],
+                        "sufficientSample":sufficient,"stages":diffs})
+    return out
+
 def regression_analysis(reports, min_samples=10, warn_delta=10.0):
     """Compare build observations within each firmware.
 
@@ -125,6 +179,7 @@ def build_stats():
             "statuses": dict(counts)
         })
 
+    stage_rows = stage_analysis(reports)
     return {
         "ok": True,
         "sampleSize": len(reports),
@@ -135,6 +190,8 @@ def build_stats():
         "stabilityObservations": dict(stability),
         "firmwareBuildComparison": comparisons,
         "regressionComparisons": regression_analysis(reports),
+        "stageReach": stage_rows,
+        "stageComparisons": stage_comparisons(stage_rows),
         "note": "Aggregates describe submitted observations; they do not establish root cause."
     }
 
